@@ -1,6 +1,11 @@
-my_env
-Quality_Guidelines.md
-test.py
-.DS_Store
+# gitignore
 
+Notes.md
 README.md
+dictate_terminal_only.py
+test.py
+
+.DS_Store
+.vscode/
+
+my_env

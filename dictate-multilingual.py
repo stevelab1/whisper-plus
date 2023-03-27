@@ -1,23 +1,23 @@
 import multiprocessing
 import signal
+import io
 import os
+import tempfile
 import threading
 import queue
 import click
 import torch
 import numpy as np
 import speech_recognition as sr
+from pydub import AudioSegment
 import whisper
-from multiprocessing import Pool
 from datetime import datetime
 
 multiprocessing.set_start_method('fork')  # added line
 
+
 stop_threads = False
 
-def download_models(model: str):
-    whisper.load_model(model)
-    return f'{model} downloaded.'
 
 def signal_handler(sig, frame):
     global stop_threads
@@ -27,16 +27,15 @@ def signal_handler(sig, frame):
     print("Merged transcripts successfully.")
     os._exit(0)
 
+
 @click.command()
-# more advanced models may produce better results, but are much slower
-@click.option("--model", default="small", help="Model to use", type=click.Choice(["tiny", "base", "small", "medium", "large"]))
+@click.option("--model", default="base", help="Model to use", type=click.Choice(["tiny", "base", "small", "medium", "large"]))
 @click.option("--english", default=True, help="Whether to use English model", is_flag=True, type=bool)
 @click.option("--verbose", default=False, help="Whether to print verbose output", is_flag=True, type=bool)
 @click.option("--energy", default=300, help="Energy level for mic to detect", type=int)
 @click.option("--dynamic_energy", default=False, is_flag=True, help="Flag to enable dynamic energy", type=bool)
 @click.option("--pause", default=0.8, help="Pause time before entry ends", type=float)
 @click.option("--save_file", default=False, help="Flag to save file", is_flag=True, type=bool)
-
 def main(model, english, verbose, energy, pause, dynamic_energy, save_file):
     signal.signal(signal.SIGINT, signal_handler)
     try:
@@ -47,15 +46,13 @@ def main(model, english, verbose, energy, pause, dynamic_energy, save_file):
                 os.makedirs("recordings")
 
         # Load the audio model and start the recording and transcription threads
-        model_filename = f"{model}.en" if model != "large" else "large-v2"
-        download_models(model_filename)  # Download the required model before using it
-        audio_model = whisper.load_model(model_filename)
+        audio_model = whisper.load_model(model)
         audio_queue = queue.Queue()
         result_queue = queue.Queue()
         threading.Thread(target=record_audio,
                          args=(audio_queue, energy, pause, dynamic_energy, save_file)).start()
         threading.Thread(target=transcribe_forever,
-                         args=(audio_queue, result_queue, audio_model, english, verbose, model_filename)).start()
+                         args=(audio_queue, result_queue, audio_model, english, verbose, model)).start()
 
         while True:
             print(result_queue.get())
@@ -64,7 +61,6 @@ def main(model, english, verbose, energy, pause, dynamic_energy, save_file):
         print("\nTerminating... Merging transcripts...")
         merge_transcripts()
         print("Merged transcripts successfully.")
-
 
 
 def record_audio(audio_queue, energy, pause, dynamic_energy, save_file):
@@ -86,16 +82,16 @@ def record_audio(audio_queue, energy, pause, dynamic_energy, save_file):
             audio_queue.put_nowait(torch_audio)
 
 
-def transcribe_forever(audio_queue, result_queue, audio_model, english, verbose, model_filename):
-    print(f"Using model: {model_filename}")  # Replace this line
+def transcribe_forever(audio_queue, result_queue, audio_model, english, verbose, model):
+    print(f"Using model: {model}")  # Replace this line
 
     while True:
         audio_data = audio_queue.get()
         if english:
             result = audio_model.transcribe(
-                audio_data, language='english', fp16=False)  # specify fp16=False
+                audio_data, language='english', fp16=False)
         else:
-            result = audio_model.transcribe(audio_data)
+            result = audio_model.transcribe(audio_data, fp16=False)
 
         output_filename = generate_output_filename().replace(".wav", ".txt")
         with open(output_filename, "w") as f:
@@ -121,6 +117,7 @@ def merge_transcripts():
             with open(os.path.join("recordings", txt_file), "r") as f:
                 content = f.read()
                 merged_file.write(content + "\n")
+
 
 
 def generate_output_filename():
