@@ -9,6 +9,10 @@ import numpy as np
 import speech_recognition as sr
 import whisper
 from datetime import datetime
+import warnings
+
+# Suppress FutureWarnings from PyTorch
+warnings.simplefilter("ignore", category=FutureWarning)
 
 multiprocessing.set_start_method('fork')
 
@@ -28,7 +32,7 @@ def signal_handler(sig, frame):
 
 @click.command()
 # more advanced models may produce better results, but are much slower
-@click.option("--model", default="medium", help="Model to use", type=click.Choice(["tiny", "base", "small", "medium", "large"]))
+@click.option("--model", default="large", help="Model to use", type=click.Choice(["tiny", "base", "small", "medium", "large"]))
 @click.option("--english", default=True, help="Whether to use English model", is_flag=True, type=bool)
 @click.option("--verbose", default=False, help="Whether to print verbose output", is_flag=True, type=bool)
 @click.option("--energy", default=300, help="Energy level for mic to detect", type=int)
@@ -46,7 +50,7 @@ def main(model, english, verbose, energy, pause, dynamic_energy, save_file):
                 os.makedirs("recordings")
 
         # Load the audio model and start the recording and transcription threads
-        model_filename = f"{model}.en" if model != "large" else "large-v2"
+        model_filename = f"{model}.en" if model != "large" else "large-v3-turbo"
         download_models(model_filename)  # Download the required model before using it
         audio_model = whisper.load_model(model_filename)
         audio_queue = queue.Queue()
