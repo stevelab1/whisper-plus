@@ -13,11 +13,9 @@ from pydub import AudioSegment
 import whisper
 from datetime import datetime
 
-multiprocessing.set_start_method('fork')  # added line
-
+multiprocessing.set_start_method('fork') 
 
 stop_threads = False
-
 
 def signal_handler(sig, frame):
     global stop_threads
@@ -117,7 +115,6 @@ def merge_transcripts():
             with open(os.path.join("recordings", txt_file), "r") as f:
                 content = f.read()
                 merged_file.write(content + "\n")
-
 
 
 def generate_output_filename():

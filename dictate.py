@@ -8,10 +8,9 @@ import torch
 import numpy as np
 import speech_recognition as sr
 import whisper
-from multiprocessing import Pool
 from datetime import datetime
 
-multiprocessing.set_start_method('fork')  # added line
+multiprocessing.set_start_method('fork')
 
 stop_threads = False
 
@@ -29,7 +28,7 @@ def signal_handler(sig, frame):
 
 @click.command()
 # more advanced models may produce better results, but are much slower
-@click.option("--model", default="small", help="Model to use", type=click.Choice(["tiny", "base", "small", "medium", "large"]))
+@click.option("--model", default="medium", help="Model to use", type=click.Choice(["tiny", "base", "small", "medium", "large"]))
 @click.option("--english", default=True, help="Whether to use English model", is_flag=True, type=bool)
 @click.option("--verbose", default=False, help="Whether to print verbose output", is_flag=True, type=bool)
 @click.option("--energy", default=300, help="Energy level for mic to detect", type=int)
@@ -64,8 +63,6 @@ def main(model, english, verbose, energy, pause, dynamic_energy, save_file):
         print("\nTerminating... Merging transcripts...")
         merge_transcripts()
         print("Merged transcripts successfully.")
-
-
 
 def record_audio(audio_queue, energy, pause, dynamic_energy, save_file):
     r = sr.Recognizer()
